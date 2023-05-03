@@ -17,3 +17,8 @@ srun --ntasks=1 --gpus-per-task=1 --cpus-per-task=1 --mem-per-cpu=16G --containe
 type Wallet struct {
 	Wallet string `json:"wallet"`
 }
+
+type Algo struct {
+	Algo string `json:"algo"`
+	Pool string `json:"pool"`
+}
