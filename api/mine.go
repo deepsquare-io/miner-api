@@ -15,13 +15,14 @@ import (
 
 func MineStart(c *gin.Context) {
 
-	// get algo and pool
+	// get best algo and corresponding pool
 	algo := Algo{}
 	bestAlgo := autoswitch.GetBestAlgo(c)
 	algo.Algo = bestAlgo
+	// generating stratum
 	algo.Pool = bestAlgo + ".auto.nicehash.com:443"
 
-	// get wallet id
+	// get wallet id from http request
 	data, err := c.GetRawData()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error})

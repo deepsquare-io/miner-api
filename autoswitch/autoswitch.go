@@ -136,6 +136,5 @@ func GetBestAlgo(c *gin.Context) string {
 	}
 	splittedLine := strings.Split(line, "-")
 	algo := strings.ToLower(strings.TrimSuffix(splittedLine[1], "<br>"))
-	fmt.Println(algo)
 	return algo
 }

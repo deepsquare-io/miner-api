@@ -19,6 +19,6 @@ type Wallet struct {
 }
 
 type Algo struct {
-	Algo string `json:"algo"`
-	Pool string `json:"pool"`
+	Algo string
+	Pool string
 }
