@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// AlgoShortnames used to build the whattomine uri
 var AlgoShortnames = map[string]string{
 	"autolykos":   "al",
 	"beamv3":      "eqb",
@@ -28,6 +29,7 @@ var AlgoShortnames = map[string]string{
 	"zhash":       "zh",
 }
 
+// GpuShortnames used to build the whattomine uri
 var GpuShortnames = map[string]string{
 	"amd69xt":   "69xt",
 	"amd68xt":   "68xt",
