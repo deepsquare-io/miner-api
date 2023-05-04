@@ -17,6 +17,7 @@ func MineStart(c *gin.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error})
+		return
 	}
 
 	wallet := Wallet{}
@@ -29,11 +30,13 @@ func MineStart(c *gin.Context) {
 	var jobScript bytes.Buffer
 	if err := tmpl.Execute(&jobScript, wallet); err != nil {
 		c.JSON(http.StatusOK, gin.H{"error": err.Error()})
+		return
 	}
 
 	jobScriptFile, err := os.Create("mining_job.sh")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	defer jobScriptFile.Close()
 	jobScriptFile.WriteString(jobScript.String())
@@ -41,6 +44,7 @@ func MineStart(c *gin.Context) {
 	cmd := exec.Command("sh", "-c", "sbatch mining_job.sh")
 	if err := cmd.Run(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{"message": "Mining job started"})
 		output, _ := cmd.Output()
@@ -57,6 +61,7 @@ func MineStop(c *gin.Context) {
 	cmd := exec.Command("sh", "-c", "scancel", os.Getenv("MINING_JOB_ID"))
 	if err := cmd.Run(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{"message": "Mining job stopped"})
 	}

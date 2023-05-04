@@ -3,9 +3,13 @@ package autoswitch
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
+	"github.com/gin-gonic/gin"
+	"golang.org/x/net/html"
 	"gopkg.in/yaml.v2"
 )
 
@@ -89,4 +93,42 @@ func GetURI() string {
 	uri = uri + costStr
 
 	return uri
+}
+
+func GetBestAlgo(c *gin.Context) string {
+	uri := GetURI()
+	resp, err := http.Get(uri)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+	defer resp.Body.Close()
+
+	doc, err := html.Parse(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+
+	var lineContainingNicehash string
+	var search func(*html.Node)
+
+	search = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "div" {
+			// If the node is a <script> tag, check its text content for "nicehash".
+			if strings.Contains(n.FirstChild.Data, "Nicehash") {
+				lineContainingNicehash = n.FirstChild.Data
+				return
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			search(c)
+			if lineContainingNicehash != "" {
+				return
+			}
+		}
+	}
+	search(doc)
+	line := strings.Split(lineContainingNicehash, "-")
+	algo := strings.ToLower(strings.TrimSuffix(line[1], "<br>"))
+
+	return algo
 }
