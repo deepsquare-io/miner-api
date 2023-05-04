@@ -22,41 +22,41 @@ gpus:
 
 algos :
   autolykos:
-    hash-rate: 250
-    power: 75
+    hash-rate: 480
+    power: 390
   beamv3:
-    hash-rate: 250
-    power: 75
+    hash-rate: 102
+    power: 540
   cuckoocycle:
-    hash-rate: 250
-    power: 75
+    hash-rate: 30
+    power: 540
   cuckatoo32:
-    hash-rate: 250
-    power: 75
+    hash-rate: 2
+    power: 540
   ethash:
-    hash-rate: 250
-    power: 75
+    hash-rate: 180
+    power: 390
   etchash:
     hash-rate: 250
     power: 75
   kawpow:
-    hash-rate: 250
-    power: 75
+    hash-rate: 83
+    power: 450
   kheavyhash:
-    hash-rate: 250
-    power: 75
+    hash-rate: 1530
+    power: 240
   neoscrypt:
-    hash-rate: 250
-    power: 75
+    hash-rate: 0
+    power: 0
   octopus:
-    hash-rate: 250
-    power: 75
+    hash-rate: 158
+    power: 540
   zelhash:
-    hash-rate: 250
-    power: 75
+    hash-rate: 204
+    power: 450
   zhash:
-    hash-rate: 250
-    power: 75
+    hash-rate: 300
+    power: 540
 
 general:
   polling_frequency: 900

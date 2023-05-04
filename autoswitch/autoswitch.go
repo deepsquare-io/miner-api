@@ -1,6 +1,7 @@
 package autoswitch
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/net/html"
 	"gopkg.in/yaml.v2"
 )
 
@@ -60,7 +61,7 @@ type Config struct {
 }
 
 func GetURI() string {
-	uri := "https://whattomine.com/coins.json?utf8=%E2%9C%93"
+	uri := "https://whattomine.com/coins?"
 
 	data, err := os.ReadFile("config.yaml")
 	if err != nil {
@@ -76,9 +77,9 @@ func GetURI() string {
 		var gpuStr string
 		gpuCode := GpuShortnames[gpu]
 		if count != 0 {
-			gpuStr = "aq_" + gpuCode + "=" + strconv.Itoa(count) + "&a_" + gpuCode + "+true&"
+			gpuStr = "aq_" + gpuCode + "=" + strconv.Itoa(count) + "&a_" + gpuCode + "=true&"
 		} else {
-			gpuStr = "aq_" + gpuCode + "+0&"
+			gpuStr = "aq_" + gpuCode + "=0&"
 		}
 		uri = uri + gpuStr
 	}
@@ -91,7 +92,7 @@ func GetURI() string {
 		uri = uri + algoStr
 	}
 
-	costStr := "&factor%5Bcost%5D=" + fmt.Sprintf("%f", cfg.General.PowerCostPerKwh) + "&factor%5Bcost_currency%5D+USD&sort=Profit&volume=0&revenue=24h&factor%5Bexchanges%5D%5B%5D=&factor%5Bexchanges%5D%5B%5D=binance&factor%5Bexchanges%5D%5B%5D=bitfinex&factor%5Bexchanges%5D%5B%5D=bitforex&factor%5Bexchanges%5D%5B%5D=bittrex&factor%5Bexchanges%5D%5B%5D=coinex&factor%5Bexchanges%5D%5B%5D=exmo&factor%5Bexchanges%5D%5B%5D=gate&factor%5Bexchanges%5D%5B%5D=graviex&factor%5Bexchanges%5D%5B%5D=hitbtc&factor%5Bexchanges%5D%5B%5D=ogre&factor%5Bexchanges%5D%5B%5D=poloniex&factor%5Bexchanges%5D%5B%5D=stex&dataset=Main&commit=Calculate"
+	costStr := "&factor%5Bcost%5D=" + fmt.Sprintf("%f", cfg.General.PowerCostPerKwh) + "&factor%5Bcost_currency%5D+USD&sort=Profit24&volume=0&revenue=24h&factor%5Bexchanges%5D%5B%5D=&factor%5Bexchanges%5D%5B%5D=binance&factor%5Bexchanges%5D%5B%5D=bitfinex&factor%5Bexchanges%5D%5B%5D=bitforex&factor%5Bexchanges%5D%5B%5D=bittrex&factor%5Bexchanges%5D%5B%5D=coinex&factor%5Bexchanges%5D%5B%5D=exmo&factor%5Bexchanges%5D%5B%5D=gate&factor%5Bexchanges%5D%5B%5D=graviex&factor%5Bexchanges%5D%5B%5D=hitbtc&factor%5Bexchanges%5D%5B%5D=ogre&factor%5Bexchanges%5D%5B%5D=poloniex&factor%5Bexchanges%5D%5B%5D=stex&dataset=Main&commit=Calculate"
 	uri = uri + costStr
 
 	return uri
@@ -105,32 +106,36 @@ func GetBestAlgo(c *gin.Context) string {
 	}
 	defer resp.Body.Close()
 
-	doc, err := html.Parse(resp.Body)
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Fatal(err)
 	}
 
-	var lineContainingNicehash string
-	var search func(*html.Node)
+	// write output to file
+	file, err := os.Create("output.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	_, err = fmt.Fprint(file, doc.Text())
+	if err != nil {
+		log.Fatal(err)
+	}
+	f, _ := os.Open("output.txt")
 
-	search = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "div" {
-			// If the node is a <div> tag, check its text content for "Nicehash-".
-			if strings.Contains(n.FirstChild.Data, "Nicehash-") {
-				lineContainingNicehash = n.FirstChild.Data
-				return
-			}
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			search(c)
-			if lineContainingNicehash != "" {
-				return
-			}
+	// Scan file for 1st nicehash occurence.
+	scanner := bufio.NewScanner(f)
+	found := false
+	var line string
+
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "Nicehash-") && !found {
+			found = true
+			line = scanner.Text()
 		}
 	}
-	search(doc)
-	line := strings.Split(lineContainingNicehash, "-")
-	algo := strings.ToLower(strings.TrimSuffix(line[1], "<br>"))
-
+	splittedLine := strings.Split(line, "-")
+	algo := strings.ToLower(strings.TrimSuffix(splittedLine[1], "<br>"))
+	fmt.Println(algo)
 	return algo
 }
