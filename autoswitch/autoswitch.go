@@ -115,8 +115,8 @@ func GetBestAlgo(c *gin.Context) string {
 
 	search = func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "div" {
-			// If the node is a <script> tag, check its text content for "nicehash".
-			if strings.Contains(n.FirstChild.Data, "Nicehash") {
+			// If the node is a <div> tag, check its text content for "Nicehash-".
+			if strings.Contains(n.FirstChild.Data, "Nicehash-") {
 				lineContainingNicehash = n.FirstChild.Data
 				return
 			}
