@@ -14,6 +14,7 @@ func main() {
 
 	r.POST("/start", api.MineStart)
 	r.POST("/stop", api.MineStop)
+	r.GET("/health", api.Health)
 
 	listenAddress := os.Getenv("LISTEN_ADDRESS")
 	if len(listenAddress) == 0 {
