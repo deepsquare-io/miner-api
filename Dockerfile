@@ -13,7 +13,7 @@ FROM ghcr.io/squarefactory/slurm:latest-login-rocky8.6 as slurm-login
 # ------------------------------------
 
 
-RUN && rm -rf /etc/s6-overlay/s6-rc.d/ssh/ \
+RUN rm -rf /etc/s6-overlay/s6-rc.d/ssh/ \
     && rm -rf /etc/s6-overlay/s6-rc.d/user/contents.d/ssh \
     && touch /etc/s6-overlay/s6-rc.d/user/contents.d/miner-api
 
