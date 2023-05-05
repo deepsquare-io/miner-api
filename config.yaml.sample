@@ -1,0 +1,64 @@
+gpus:
+  amd69xt: 0
+  amd68xt: 0
+  amd67xt: 0
+  amd66xt: 0
+  vii: 0
+  amd5700xt: 0
+  amd5700: 0
+  amd5600xt: 0
+  vega64: 0
+  vega56: 0
+  nvi4090: 0
+  nvi4080: 0
+  nvi47Ti: 0
+  nvi47: 0
+  nvi39Ti: 0
+  nvi3090: 0
+  nvi38Ti: 0
+  nvi3080: 0
+  nvi37Ti: 0
+  nvi3070: 3
+
+algos :
+  autolykos:
+    hash-rate: 480
+    power: 390
+  beamv3:
+    hash-rate: 102
+    power: 540
+  cuckoocycle:
+    hash-rate: 30
+    power: 540
+  cuckatoo32:
+    hash-rate: 2
+    power: 540
+  ethash:
+    hash-rate: 180
+    power: 390
+  etchash:
+    hash-rate: 250
+    power: 75
+  kawpow:
+    hash-rate: 83
+    power: 450
+  kheavyhash:
+    hash-rate: 1530
+    power: 240
+  neoscrypt:
+    hash-rate: 0
+    power: 0
+  octopus:
+    hash-rate: 158
+    power: 540
+  zelhash:
+    hash-rate: 204
+    power: 450
+  zhash:
+    hash-rate: 300
+    power: 540
+
+general:
+  polling_frequency: 900
+  power_cost_per_kwh: 0.13
+  threshold: 0.05

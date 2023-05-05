@@ -63,7 +63,7 @@ type Config struct {
 func GetURI() string {
 	uri := "https://whattomine.com/coins?"
 
-	data, err := os.ReadFile("config.yaml")
+	data, err := os.ReadFile("/config/config.yaml")
 	if err != nil {
 		log.Fatal("unable to open config.yaml")
 	}
