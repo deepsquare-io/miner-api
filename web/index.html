@@ -1,50 +1,62 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <link rel="stylesheet" href="https://picocss.com/pico.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
   </head>
   <body>
-    <h1>Golang API for Mining Cryptocurrencies</h1>
-    <label class="toggle">
-      <input type="checkbox" id="toggle-switch">
-      <span class="toggle-mark"></span>
-    </label>
-    <label for="wallet-id">Wallet ID:</label>
-    <input type="text" id="wallet-id">
-    <button id="save-button">Save</button>
+    <hgroup>
+    <h1>Mining golang API</h1>
+    <h2>Enables mining on ClusterFactory clusters to offset power costs</h2>
+    </hgroup>
+
+    <form>
+        <div class="grid">
+        <input type="text" id="wallet-id" placeholder="Wallet ID" aria-label="Wallet ID" required/>
+        <button type="submit" id="save-button">Save</button>
+        </div>
+    </form>
+    
     <p id="current-wallet-id"></p>
     
+    <label class="toggle">
+      <input type="checkbox" id="toggle-switch" role="switch">
+      Start / Stop mining jobs
+      <span class="toggle-mark"></span>
+    </label>
+    
     <script>
-      const toggleSwitch = document.querySelector('#toggle-switch');
-toggleSwitch.addEventListener('change', (event) => {
-  const checked = event.target.checked;
-  const url = checked ? '/start' : '/stop';
-  const walletId = document.querySelector('#wallet-id').value;
-  const body = { walletId };
-  fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-});
-
-const saveButton = document.querySelector('#save-button');
-saveButton.addEventListener('click', () => {
-  const walletId = document.querySelector('#wallet-id').value;
-  const body = { walletId };
-  fetch('/save-wallet', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  })
-  .then(response => response.json())
-  .then(data => {
-    const currentWalletId = data.walletId;
-    document.querySelector('#current-wallet-id').textContent = `Current wallet ID: ${currentWalletId}`;
-  });
-});
-
+    const toggleSwitch = document.querySelector('#toggle-switch');
+    toggleSwitch.addEventListener('change', (event) => {
+      const checked = event.target.checked;
+      const url = checked ? '/start' : '/stop';
+      const walletId = document.querySelector('#wallet-id').value;
+      const body = { walletId };
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    });
+    
+    const saveButton = document.querySelector('#save-button');
+    saveButton.addEventListener('click', (event) => {
+      // prevent the default form submission behavior
+      event.preventDefault();
+      
+      const walletId = document.querySelector('#wallet-id').value;
+      const body = { walletId };
+      fetch('/save-wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      .then(response => response.json())
+      .then(data => {
+        const currentWalletId = data.walletId;
+        document.querySelector('#current-wallet-id').textContent = `Current wallet ID: ${currentWalletId}`;
+      });
+    });
     </script>
-
+    
   </body>
 </html>
