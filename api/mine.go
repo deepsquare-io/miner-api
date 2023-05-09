@@ -66,7 +66,12 @@ func MineStart(c *gin.Context) {
 
 func MineStop(c *gin.Context) {
 
-	cmd := exec.Command("sh", "-c", "scancel", os.Getenv("MINING_JOB_ID"))
+	jobID := os.Getenv("MINING_JOB_ID")
+	if len(jobID) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no mining job to stop"})
+	}
+
+	cmd := exec.Command("sh", "-c", "scancel", jobID)
 	if err := cmd.Run(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
