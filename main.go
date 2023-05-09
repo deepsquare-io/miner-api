@@ -14,7 +14,10 @@ func main() {
 
 	r.POST("/start", api.MineStart)
 	r.POST("/stop", api.MineStop)
+	r.POST("/save-wallet", api.SaveWallet)
+
 	r.GET("/health", api.Health)
+	r.StaticFile("/", "./web/index.html")
 
 	listenAddress := os.Getenv("LISTEN_ADDRESS")
 	if len(listenAddress) == 0 {

@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"os"
 	"os/exec"
@@ -15,25 +14,21 @@ import (
 
 func MineStart(c *gin.Context) {
 
+	// get wallet id from env
+	wallet := Wallet{}
+	walletID := os.Getenv("WALLET_ID")
+	if len(walletID) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "wallet not defined"})
+		return
+	}
+	wallet.Wallet = walletID
+
 	// get best algo and corresponding pool
 	algo := Algo{}
 	bestAlgo := autoswitch.GetBestAlgo(c)
 	algo.Algo = bestAlgo
 	// generating stratum
 	algo.Pool = bestAlgo + ".auto.nicehash.com:443"
-
-	// get wallet id from http request
-	data, err := c.GetRawData()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error})
-		return
-	}
-
-	wallet := Wallet{}
-	if err := json.Unmarshal(data, &wallet); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
 
 	tmpl := template.Must(template.New("jobTemplate").Parse(JobTemplate))
 	var jobScript bytes.Buffer

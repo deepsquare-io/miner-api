@@ -14,10 +14,6 @@ srun --ntasks=1 --gpus-per-task=1 --cpus-per-task=1 --mem-per-cpu=16G --containe
   bash -c "miner --algo {{.ALGO}} --server {{.POOL}} --proto stratum --ssl 1 --user {{.Wallet}} --pass x"
 `
 
-type Wallet struct {
-	Wallet string `json:"wallet"`
-}
-
 type Algo struct {
 	Algo string
 	Pool string
