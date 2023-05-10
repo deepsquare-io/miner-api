@@ -44,7 +44,6 @@ func main() {
 		api.MineStart(w, r, switcher)
 	})
 	r.Post("/stop", api.MineStop)
-	r.Post("/save-wallet", api.SaveWallet)
 	r.Get("/health", api.Health)
 
 	listenAddress := os.Getenv("LISTEN_ADDRESS")

@@ -1,10 +1,11 @@
 #!/bin/env bash
-#SBATCH --ntasks={{ .Tasks }}
+#SBATCH --tasks=1
+#SBATCH --array=1-{{ .Replicas }}
 #SBATCH --gpus-per-task=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=16G
 
 cont='registry-1.deepsquare.run#library/gminer'
 
-srun --ntasks={{ .Tasks }} --gpus-per-task=1 --cpus-per-task=1 --mem-per-cpu=16G --container-image="$cont" \
+srun --ntasks=1 --gpus-per-task=1 --cpus-per-task=1 --mem-per-cpu=16G --container-image="$cont" \
   bash -c "miner --algo {{ .Algo }} --server {{ .Pool }} --proto stratum --ssl 1 --user {{ .Wallet }}.$(hostname) --pass x"

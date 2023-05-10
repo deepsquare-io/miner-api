@@ -19,19 +19,31 @@ const (
 )
 
 func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
-	// get wallet id from env
-	wallet := Wallet{}
+	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
+
+	// TODO: replace with user value
+	replicas := 1
+	// TODO: make sure replicas > 0
+
+	walletID := r.FormValue("walletId")
 	if len(walletID) == 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "wallet not defined"})
 		return
 	}
-	wallet.Wallet = walletID
+
+	// Check if already running
+	if jobID, err := slurm.FindRunningJobByName(r.Context(), &scheduler.FindRunningJobByNameRequest{
+		Name: jobName,
+		User: user,
+	}); err == nil {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, Error{Error: fmt.Sprintf("job %d is already running", jobID)})
+		return
+	}
 
 	// get best algo and corresponding pool
-	algo := Algo{}
 	bestAlgo, err := s.GetBestAlgo(r.Context())
-
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, Error{Error: err.Error()})
@@ -39,33 +51,24 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		return
 	}
 
-	algo.Algo = bestAlgo
-	// generating stratum
-	algo.Pool = bestAlgo + ".auto.nicehash.com:443"
-
-	// TODO: replace with user value
-	tasks := 1
-
 	tmpl := template.Must(template.New("jobTemplate").Parse(JobTemplate))
 	var jobScript bytes.Buffer
 	if err := tmpl.Execute(&jobScript, struct {
-		Wallet string
-		Algo   string
-		Pool   string
-		Tasks  int
+		Wallet   string
+		Algo     string
+		Pool     string
+		Replicas int
 	}{
-		Wallet: wallet.Wallet,
-		Algo:   algo.Algo,
-		Pool:   algo.Pool,
-		Tasks:  tasks,
+		Wallet:   walletID,
+		Algo:     bestAlgo,
+		Pool:     bestAlgo + ".auto.nicehash.com:443",
+		Replicas: replicas,
 	}); err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, Error{Error: err.Error()})
 		log.Printf("templating failed: %s", err)
 		return
 	}
-
-	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
 
 	out, err := slurm.Submit(r.Context(), &scheduler.SubmitRequest{
 		Name: jobName,

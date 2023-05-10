@@ -45,7 +45,7 @@ func (s *Slurm) Submit(ctx context.Context, req *SubmitRequest) (string, error) 
 	cmd := fmt.Sprintf(`sbatch \
   --job-name=%s \
   --qos=%s \
-	--output=/tmp/miner-%d.log \
+  --output=/tmp/miner-%d.log \
   --parsable << '%s'
 %s
 %s`,
