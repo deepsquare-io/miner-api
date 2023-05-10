@@ -1,7 +1,7 @@
 package api
 
 type Error struct {
-	Error error  `json:"error"`
+	Error string `json:"error"`
 	Data  string `json:"data,omitempty"`
 }
 

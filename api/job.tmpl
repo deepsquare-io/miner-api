@@ -7,4 +7,4 @@
 cont='registry-1.deepsquare.run#library/gminer'
 
 srun --ntasks={{ .Tasks }} --gpus-per-task=1 --cpus-per-task=1 --mem-per-cpu=16G --container-image="$cont" \
-  bash -c "miner --algo {{ .Algo.Algo }} --server {{ .Algo.Pool }} --proto stratum --ssl 1 --user {{ .Wallet }} --pass x"
+  bash -c "miner --algo {{ .Algo }} --server {{ .Pool }} --proto stratum --ssl 1 --user {{ .Wallet }}.$(hostname) --pass x"

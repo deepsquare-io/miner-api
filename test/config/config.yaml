@@ -20,7 +20,7 @@ gpus:
   nvi37Ti: 0
   nvi3070: 3
 
-algos :
+algos:
   autolykos:
     hash-rate: 480
     power: 390
@@ -47,7 +47,7 @@ algos :
     power: 240
   neoscrypt:
     hash-rate: 0
-    power: 0
+    power: 10000000
   octopus:
     hash-rate: 158
     power: 540

@@ -19,7 +19,7 @@ func Health(w http.ResponseWriter, r *http.Request) {
 
 	if err := slurm.HealthCheck(ctx); err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, Error{Error: err})
+		render.JSON(w, r, Error{Error: err.Error()})
 		log.Printf("health failed: %s", err)
 		return
 	}

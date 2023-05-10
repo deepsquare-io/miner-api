@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,7 +23,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	wallet := Wallet{}
 	if len(walletID) == 0 {
 		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, Error{Error: errors.New("wallet not defined")})
+		render.JSON(w, r, Error{Error: "wallet not defined"})
 		return
 	}
 	wallet.Wallet = walletID
@@ -35,7 +34,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, Error{Error: err})
+		render.JSON(w, r, Error{Error: err.Error()})
 		log.Printf("GetBestAlgo failed: %s", err)
 		return
 	}
@@ -50,16 +49,18 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	tmpl := template.Must(template.New("jobTemplate").Parse(JobTemplate))
 	var jobScript bytes.Buffer
 	if err := tmpl.Execute(&jobScript, struct {
-		Wallet Wallet
-		Algo   Algo
+		Wallet string
+		Algo   string
+		Pool   string
 		Tasks  int
 	}{
-		Wallet: wallet,
-		Algo:   algo,
+		Wallet: wallet.Wallet,
+		Algo:   algo.Algo,
+		Pool:   algo.Pool,
 		Tasks:  tasks,
 	}); err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, Error{Error: err})
+		render.JSON(w, r, Error{Error: err.Error()})
 		log.Printf("templating failed: %s", err)
 		return
 	}
@@ -73,7 +74,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	})
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, Error{Error: err, Data: out})
+		render.JSON(w, r, Error{Error: err.Error(), Data: out})
 		log.Printf("submit failed: %s", err)
 		return
 	}
@@ -90,7 +91,7 @@ func MineStop(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		render.JSON(w, r, Error{
-			Error: err,
+			Error: err.Error(),
 			Data:  "Mining job stopped",
 		})
 		log.Printf("mine stop failed: %s", err)

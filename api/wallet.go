@@ -18,7 +18,7 @@ func SaveWallet(w http.ResponseWriter, r *http.Request) {
 	wallet := Wallet{}
 	if err := json.NewDecoder(r.Body).Decode(&wallet); err != nil {
 		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, Error{Error: err})
+		render.JSON(w, r, Error{Error: err.Error()})
 		return
 	}
 

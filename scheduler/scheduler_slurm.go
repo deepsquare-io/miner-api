@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/squarefactory/miner-api/utils"
 )
@@ -44,11 +45,13 @@ func (s *Slurm) Submit(ctx context.Context, req *SubmitRequest) (string, error) 
 	cmd := fmt.Sprintf(`sbatch \
   --job-name=%s \
   --qos=%s \
+	--output=/tmp/miner-%d.log \
   --parsable << '%s'
 %s
 %s`,
 		req.Name,
 		QosName,
+		time.Now().UnixMilli(),
 		eof,
 		req.Body,
 		eof,
