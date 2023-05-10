@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: slurm-login
+  labels:
+    name: slurm-login
+spec:
+  containers:
+    - name: slurm-login
+      command:
+        - sh
+        - -c
+        - update-ca-trust && /init
+      ports:
+        - containerPort: 8080
+          hostPort: 8080
+      image: slurm-login
+      env:
+        - name: CONFIG_PATH
+          value: /config/config.yaml
+      volumeMounts:
+        - mountPath: /secrets/munge
+          name: munge
+        - mountPath: /secrets/sssd
+          name: sssd
+        - mountPath: /etc/slurm
+          name: slurm
+        - mountPath: /etc/pki/ca-trust/source/anchors
+          name: ca
+        - mountPath: /config
+          name: config
+  volumes:
+    - name: munge
+      hostPath:
+        path: ./munge
+        type: Directory
+    - name: sssd
+      hostPath:
+        path: ./sssd
+        type: Directory
+    - name: slurm
+      hostPath:
+        path: ./slurm
+        type: Directory
+    - name: ca
+      hostPath:
+        path: ./ca
+        type: Directory
+    - name: config
+      hostPath:
+        path: ./config
+        type: Directory

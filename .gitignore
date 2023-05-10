@@ -1,2 +1,4 @@
 output.txt
 miner-api
+munge.key
+sssd.conf

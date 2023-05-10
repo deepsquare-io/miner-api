@@ -2,6 +2,7 @@ package autoswitch
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,8 +11,6 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/gin-gonic/gin"
-	"gopkg.in/yaml.v2"
 )
 
 // AlgoShortnames used to build the whattomine uri
@@ -60,22 +59,14 @@ type Config struct {
 	General General              `yaml:"general"`
 }
 
-func GetURI(c *gin.Context) (string, error) {
+type Switcher struct {
+	Config *Config
+}
+
+func (s *Switcher) GetURI(c context.Context) (string, error) {
 	uri := "https://whattomine.com/coins?"
 
-	data, err := os.ReadFile("/config/config.yaml")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return "", err
-	}
-
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return "", err
-	}
-
-	for gpu, count := range cfg.Gpus {
+	for gpu, count := range s.Config.Gpus {
 		var gpuStr string
 		gpuCode := GpuShortnames[gpu]
 		if count != 0 {
@@ -86,30 +77,32 @@ func GetURI(c *gin.Context) (string, error) {
 		uri = uri + gpuStr
 	}
 
-	for algo := range cfg.Algos {
+	for algo := range s.Config.Algos {
 		algoCode := AlgoShortnames[algo]
-		hashRate := strconv.Itoa(cfg.Algos[algo].HashRate)
-		power := strconv.Itoa(cfg.Algos[algo].Power)
+		hashRate := strconv.Itoa(s.Config.Algos[algo].HashRate)
+		power := strconv.Itoa(s.Config.Algos[algo].Power)
 		algoStr := "&" + algoCode + "=true&factor%5B" + algoCode + "_hr%5D=" + hashRate + "&factor%5B" + algoCode + "_p%5D=" + power
 		uri = uri + algoStr
 	}
 
-	costStr := "&factor%5Bcost%5D=" + fmt.Sprintf("%f", cfg.General.PowerCostPerKwh) + "&factor%5Bcost_currency%5D+USD&sort=Profit24&volume=0&revenue=24h&factor%5Bexchanges%5D%5B%5D=&factor%5Bexchanges%5D%5B%5D=binance&factor%5Bexchanges%5D%5B%5D=bitfinex&factor%5Bexchanges%5D%5B%5D=bitforex&factor%5Bexchanges%5D%5B%5D=bittrex&factor%5Bexchanges%5D%5B%5D=coinex&factor%5Bexchanges%5D%5B%5D=exmo&factor%5Bexchanges%5D%5B%5D=gate&factor%5Bexchanges%5D%5B%5D=graviex&factor%5Bexchanges%5D%5B%5D=hitbtc&factor%5Bexchanges%5D%5B%5D=ogre&factor%5Bexchanges%5D%5B%5D=poloniex&factor%5Bexchanges%5D%5B%5D=stex&dataset=Main&commit=Calculate"
+	costStr := "&factor%5Bcost%5D=" + fmt.Sprintf(
+		"%f",
+		s.Config.General.PowerCostPerKwh,
+	) + "&factor%5Bcost_currency%5D+USD&sort=Profit24&volume=0&revenue=24h&factor%5Bexchanges%5D%5B%5D=&factor%5Bexchanges%5D%5B%5D=binance&factor%5Bexchanges%5D%5B%5D=bitfinex&factor%5Bexchanges%5D%5B%5D=bitforex&factor%5Bexchanges%5D%5B%5D=bittrex&factor%5Bexchanges%5D%5B%5D=coinex&factor%5Bexchanges%5D%5B%5D=exmo&factor%5Bexchanges%5D%5B%5D=gate&factor%5Bexchanges%5D%5B%5D=graviex&factor%5Bexchanges%5D%5B%5D=hitbtc&factor%5Bexchanges%5D%5B%5D=ogre&factor%5Bexchanges%5D%5B%5D=poloniex&factor%5Bexchanges%5D%5B%5D=stex&dataset=Main&commit=Calculate"
 	uri = uri + costStr
 
 	return uri, nil
 }
 
-func GetBestAlgo(c *gin.Context) (string, error) {
-	uri, err := GetURI(c)
+func (s *Switcher) GetBestAlgo(c context.Context) (string, error) {
+	uri, err := s.GetURI(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return "", err
 	}
 
 	resp, err := http.Get(uri)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return "", err
 	}
 	defer resp.Body.Close()
 

@@ -3,31 +3,25 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"os"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/render"
 )
+
+var walletID string
 
 type Wallet struct {
 	Wallet string `json:"walletId"`
 }
 
-func SaveWallet(c *gin.Context) {
-
+func SaveWallet(w http.ResponseWriter, r *http.Request) {
 	// get wallet id from http request
-	data, err := c.GetRawData()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error})
-		return
-	}
-
 	wallet := Wallet{}
-	if err := json.Unmarshal(data, &wallet); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&wallet); err != nil {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, Error{Error: err})
 		return
 	}
 
-	os.Setenv("WALLET_ID", wallet.Wallet)
-	c.JSON(http.StatusOK, gin.H{"walletId": os.Getenv("WALLET_ID")})
-
+	walletID = wallet.Wallet
+	render.JSON(w, r, OK{walletID})
 }

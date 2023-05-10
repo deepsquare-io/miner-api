@@ -2,30 +2,60 @@ package main
 
 import (
 	"log"
+	"net"
+	"net/http"
 	"os"
 
-	"github.com/gin-gonic/gin"
+	_ "embed"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 	"github.com/squarefactory/miner-api/api"
+	"github.com/squarefactory/miner-api/autoswitch"
+	"gopkg.in/yaml.v3"
 )
 
+//go:embed web/index.html
+var f string
+
 func main() {
+	configPath := os.Getenv("CONFIG_PATH")
+	cb, err := os.ReadFile(configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var config autoswitch.Config
+	if err := yaml.Unmarshal(cb, &config); err != nil {
+		log.Fatal(err)
+	}
 
-	r := gin.Default()
+	switcher := &autoswitch.Switcher{
+		Config: &config,
+	}
+	r := chi.NewRouter()
 
-	r.POST("/start", api.MineStart)
-	r.POST("/stop", api.MineStop)
-	r.POST("/save-wallet", api.SaveWallet)
+	r.Use(middleware.Logger)
 
-	r.GET("/health", api.Health)
-	r.StaticFile("/", "./web/index.html")
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		render.HTML(w, r, f)
+	})
+	r.Post("/start", func(w http.ResponseWriter, r *http.Request) {
+		api.MineStart(w, r, switcher)
+	})
+	r.Post("/stop", api.MineStop)
+	r.Post("/save-wallet", api.SaveWallet)
+	r.Get("/health", api.Health)
 
 	listenAddress := os.Getenv("LISTEN_ADDRESS")
 	if len(listenAddress) == 0 {
 		listenAddress = ":8080"
 	}
-
-	err := r.Run(listenAddress)
+	l, err := net.Listen("tcp", listenAddress)
 	if err != nil {
+		log.Fatal(err)
+	}
+	if err := http.Serve(l, r); err != nil {
 		log.Fatal(err)
 	}
 }

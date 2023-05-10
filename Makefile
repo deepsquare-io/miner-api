@@ -5,7 +5,7 @@ GIT_COMMIT = $(shell git rev-parse --short=7 HEAD)
 VERSION = $(or ${TAG_NAME},$(TAG_NAME_DEV)-dev)
 
 bin/miner-api: $(GO_SRCS) set-version
-	CGO_ENABLED=0 go build -o "$@" ./main.go
+	CGO_ENABLED=0 go build -ldflags "-s -w" -o "$@" ./main.go
 
 bins := miner-api
 bin/checksums.txt: $(addprefix bin/,$(bins))
@@ -35,3 +35,7 @@ lint: $(golint)
 .PHONY: clean
 clean:
 	rm -rf bin/
+
+.PHONY: mocks
+mocks:
+	mockery --all

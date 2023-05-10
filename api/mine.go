@@ -2,33 +2,41 @@ package api
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
+	"log"
 	"net/http"
-	"os"
-	"os/exec"
-	"regexp"
 	"text/template"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/render"
 	"github.com/squarefactory/miner-api/autoswitch"
+	"github.com/squarefactory/miner-api/executor"
+	"github.com/squarefactory/miner-api/scheduler"
 )
 
-func MineStart(c *gin.Context) {
+const (
+	jobName = "auto-mining"
+	user    = "root"
+)
 
+func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	// get wallet id from env
 	wallet := Wallet{}
-	walletID := os.Getenv("WALLET_ID")
 	if len(walletID) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "wallet not defined"})
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, Error{Error: errors.New("wallet not defined")})
 		return
 	}
 	wallet.Wallet = walletID
 
 	// get best algo and corresponding pool
 	algo := Algo{}
-	bestAlgo, err := autoswitch.GetBestAlgo(c)
+	bestAlgo, err := s.GetBestAlgo(r.Context())
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, Error{Error: err})
+		log.Printf("GetBestAlgo failed: %s", err)
 		return
 	}
 
@@ -36,53 +44,57 @@ func MineStart(c *gin.Context) {
 	// generating stratum
 	algo.Pool = bestAlgo + ".auto.nicehash.com:443"
 
+	// TODO: replace with user value
+	tasks := 1
+
 	tmpl := template.Must(template.New("jobTemplate").Parse(JobTemplate))
 	var jobScript bytes.Buffer
-	if err := tmpl.Execute(&jobScript, wallet); err != nil {
-		c.JSON(http.StatusOK, gin.H{"error": err.Error()})
-		return
-	}
-	if err := tmpl.Execute(&jobScript, algo); err != nil {
-		c.JSON(http.StatusOK, gin.H{"error": err.Error()})
+	if err := tmpl.Execute(&jobScript, struct {
+		Wallet Wallet
+		Algo   Algo
+		Tasks  int
+	}{
+		Wallet: wallet,
+		Algo:   algo,
+		Tasks:  tasks,
+	}); err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, Error{Error: err})
+		log.Printf("templating failed: %s", err)
 		return
 	}
 
-	jobScriptFile, err := os.Create("mining_job.sh")
+	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
+
+	out, err := slurm.Submit(r.Context(), &scheduler.SubmitRequest{
+		Name: jobName,
+		User: user,
+		Body: jobScript.String(),
+	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, Error{Error: err, Data: out})
+		log.Printf("submit failed: %s", err)
 		return
 	}
-	defer jobScriptFile.Close()
-	jobScriptFile.WriteString(jobScript.String())
 
-	cmd := exec.Command("sh", "-c", "sbatch mining_job.sh")
-	if err := cmd.Run(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	} else {
-		c.JSON(http.StatusOK, gin.H{"message": "Mining job started"})
-		output, _ := cmd.Output()
-
-		jobIDRegex := regexp.MustCompile(`\d+`)
-		jobID := string(jobIDRegex.Find(output))
-
-		os.Setenv("MINING_JOB_ID", jobID)
-	}
+	render.JSON(w, r, OK{fmt.Sprintf("Mining job %s started", out)})
 }
 
-func MineStop(c *gin.Context) {
+func MineStop(w http.ResponseWriter, r *http.Request) {
+	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
+	err := slurm.CancelJob(r.Context(), &scheduler.CancelRequest{
+		Name: jobName,
+		User: user,
+	})
 
-	jobID := os.Getenv("MINING_JOB_ID")
-	if len(jobID) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no mining job to stop"})
+	if err != nil {
+		render.JSON(w, r, Error{
+			Error: err,
+			Data:  "Mining job stopped",
+		})
+		log.Printf("mine stop failed: %s", err)
 		return
 	}
-
-	cmd := exec.Command("sh", "-c", "scancel", jobID)
-	if err := cmd.Run(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	} else {
-		c.JSON(http.StatusOK, gin.H{"message": "Mining job stopped"})
-	}
+	render.JSON(w, r, OK{"Mining job stopped"})
 }

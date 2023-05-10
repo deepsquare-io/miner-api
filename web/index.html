@@ -15,15 +15,15 @@
         <button type="submit" id="save-button">Save</button>
         </div>
     </form>
-    
+
     <p id="current-wallet-id"></p>
-    
+
     <label class="toggle">
       <input type="checkbox" id="toggle-switch" role="switch">
       Start / Stop mining jobs
       <span class="toggle-mark"></span>
     </label>
-    
+
     <script>
     const toggleSwitch = document.querySelector('#toggle-switch');
     toggleSwitch.addEventListener('change', (event) => {
@@ -35,14 +35,14 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      });
+      }).then(console.log).catch(console.error);
     });
-    
+
     const saveButton = document.querySelector('#save-button');
     saveButton.addEventListener('click', (event) => {
       // prevent the default form submission behavior
       event.preventDefault();
-      
+
       const walletId = document.querySelector('#wallet-id').value;
       const body = { walletId };
       fetch('/save-wallet', {
@@ -52,11 +52,11 @@
       })
       .then(response => response.json())
       .then(data => {
-        const currentWalletId = data.walletId;
+        const currentWalletId = data.data;
         document.querySelector('#current-wallet-id').textContent = `Current wallet ID: ${currentWalletId}`;
-      });
+      }).catch(console.error);
     });
     </script>
-    
+
   </body>
 </html>
