@@ -25,7 +25,13 @@ func MineStart(c *gin.Context) {
 
 	// get best algo and corresponding pool
 	algo := Algo{}
-	bestAlgo := autoswitch.GetBestAlgo(c)
+	bestAlgo, err := autoswitch.GetBestAlgo(c)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	algo.Algo = bestAlgo
 	// generating stratum
 	algo.Pool = bestAlgo + ".auto.nicehash.com:443"
@@ -69,6 +75,7 @@ func MineStop(c *gin.Context) {
 	jobID := os.Getenv("MINING_JOB_ID")
 	if len(jobID) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no mining job to stop"})
+		return
 	}
 
 	cmd := exec.Command("sh", "-c", "scancel", jobID)

@@ -60,17 +60,19 @@ type Config struct {
 	General General              `yaml:"general"`
 }
 
-func GetURI() string {
+func GetURI(c *gin.Context) (string, error) {
 	uri := "https://whattomine.com/coins?"
 
 	data, err := os.ReadFile("/config/config.yaml")
 	if err != nil {
-		log.Fatal("unable to open config.yaml")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return "", err
 	}
 
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		log.Fatal("invalid yaml config")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return "", err
 	}
 
 	for gpu, count := range cfg.Gpus {
@@ -95,11 +97,16 @@ func GetURI() string {
 	costStr := "&factor%5Bcost%5D=" + fmt.Sprintf("%f", cfg.General.PowerCostPerKwh) + "&factor%5Bcost_currency%5D+USD&sort=Profit24&volume=0&revenue=24h&factor%5Bexchanges%5D%5B%5D=&factor%5Bexchanges%5D%5B%5D=binance&factor%5Bexchanges%5D%5B%5D=bitfinex&factor%5Bexchanges%5D%5B%5D=bitforex&factor%5Bexchanges%5D%5B%5D=bittrex&factor%5Bexchanges%5D%5B%5D=coinex&factor%5Bexchanges%5D%5B%5D=exmo&factor%5Bexchanges%5D%5B%5D=gate&factor%5Bexchanges%5D%5B%5D=graviex&factor%5Bexchanges%5D%5B%5D=hitbtc&factor%5Bexchanges%5D%5B%5D=ogre&factor%5Bexchanges%5D%5B%5D=poloniex&factor%5Bexchanges%5D%5B%5D=stex&dataset=Main&commit=Calculate"
 	uri = uri + costStr
 
-	return uri
+	return uri, nil
 }
 
-func GetBestAlgo(c *gin.Context) string {
-	uri := GetURI()
+func GetBestAlgo(c *gin.Context) (string, error) {
+	uri, err := GetURI(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return "", err
+	}
+
 	resp, err := http.Get(uri)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -136,5 +143,5 @@ func GetBestAlgo(c *gin.Context) string {
 	}
 	splittedLine := strings.Split(line, "-")
 	algo := strings.ToLower(strings.TrimSuffix(splittedLine[1], "<br>"))
-	return algo
+	return algo, nil
 }
