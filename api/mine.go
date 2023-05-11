@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
+	"strconv"
 	"text/template"
 
 	"github.com/go-chi/render"
@@ -21,9 +23,30 @@ const (
 func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
 
-	// TODO: replace with user value
-	replicas := 1
-	// TODO: make sure replicas > 0
+	percent, err := strconv.ParseFloat(r.FormValue("usage"), 64)
+	if err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, Error{Error: err.Error()})
+		log.Printf("failed to parse usage value: %s", err)
+		return
+	}
+
+	maxGpu, err := slurm.FindMaxGpu(r.Context())
+	if err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, Error{Error: err.Error()})
+		log.Printf("failed to compute maxGpu: %s", err)
+		return
+	}
+
+	// compute replicas
+	replicas := int(math.Floor((percent / 100) * float64(maxGpu)))
+	// make sure replicas > 0
+	if replicas <= 0 {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, Error{Error: "usage not defined"})
+		return
+	}
 
 	walletID := r.FormValue("walletId")
 	if len(walletID) == 0 {

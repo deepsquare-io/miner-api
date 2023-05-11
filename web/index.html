@@ -27,6 +27,18 @@
             />
           </div>
 
+          <label for="usage"
+            >Replicas
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value="50"
+              id="usage"
+              name="usage"
+            />
+          </label>
+
           <button id="startButton" type="submit" form="startForm">
             Start job
           </button>
@@ -51,13 +63,18 @@
       const stopForm = document.getElementById('stopForm');
       const stopButton = document.getElementById('stopButton');
       const walletIdInput = document.getElementById('walletId');
+      const usageInput = document.getElementById('usage');
 
       // Restore cached form values
       window.addEventListener('DOMContentLoaded', () => {
         const cachedWalletId = localStorage.getItem('walletId');
+        const cachedUsage = localStorage.getItem('usage');
 
         if (cachedWalletId) {
           walletIdInput.value = cachedWalletId;
+        }
+        if (cachedUsage) {
+          usageInput.value = cachedUsage;
         }
       });
 
@@ -69,10 +86,12 @@
 
         // Store form values in localStorage
         localStorage.setItem('walletId', walletIdInput.value);
+        localStorage.setItem('usage', usageInput.value);
 
         // Submit form
         const formData = new FormData();
         formData.append('walletId', walletIdInput.value);
+        formData.append('usage', usageInput.value);
 
         fetch('/start', {
           method: 'POST',
