@@ -62,7 +62,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	// Compute CPU replica numbers, keeping at least 1 core per gpu mining job
 	CPUreplicas := int(math.Floor((percent/100)*float64(maxCPU))) - GPUreplicas
 	// make sure CPU replicas > 0
-	if CPUreplicas >= 0 {
+	if CPUreplicas <= 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "usage not defined"})
 		return
