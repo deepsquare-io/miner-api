@@ -115,19 +115,17 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	}
 
 	// submitting gpu mining job
-	out, err := slurm.Submit(r.Context(), &scheduler.SubmitRequest{
+	GPUout, err := slurm.Submit(r.Context(), &scheduler.SubmitRequest{
 		Name: GPUJobName,
 		User: user,
 		Body: GPUJobScript.String(),
 	})
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, Error{Error: err.Error(), Data: out})
+		render.JSON(w, r, Error{Error: err.Error(), Data: GPUout})
 		log.Printf("submit failed: %s", err)
 		return
 	}
-
-	render.JSON(w, r, OK{fmt.Sprintf("Mining job %s started", out)})
 
 	// Check if already running
 	if jobID, err := slurm.FindRunningJobByName(r.Context(), &scheduler.FindRunningJobByNameRequest{
@@ -160,19 +158,19 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	}
 
 	// submitting cpu mining job
-	out, err = slurm.Submit(r.Context(), &scheduler.SubmitRequest{
+	CPUout, err := slurm.Submit(r.Context(), &scheduler.SubmitRequest{
 		Name: CPUJobName,
 		User: user,
 		Body: CPUJobScript.String(),
 	})
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, Error{Error: err.Error(), Data: out})
+		render.JSON(w, r, Error{Error: err.Error(), Data: CPUout})
 		log.Printf("submit failed: %s", err)
 		return
 	}
 
-	render.JSON(w, r, OK{fmt.Sprintf("Mining job %s started", out)})
+	render.JSON(w, r, OK{fmt.Sprintf("Mining jobs %s, %s started", GPUout, CPUout)})
 
 }
 
