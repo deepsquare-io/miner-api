@@ -1,5 +1,5 @@
 #!/bin/env bash
-#SBATCH --tasks=1
+#SBATCH --ntasks=1
 #SBATCH --array=1-{{ .Replicas }}
 #SBATCH --gpus-per-task=0
 #SBATCH --cpus-per-task=1
@@ -7,5 +7,5 @@
 
 cont='registry-1.deepsquare.run#library/xmr-stak-rx'
 
-srun --ntasks=1 --cpus-per-task=1 --mem-per-cpu=4G --container-image="$cont" \
-  bash -c "xmr-stak-rx --currency {{ .Algo }} --tls-url {{ .Pool }} --user {{ .Wallet }}.$(hostname) --pass x --use-nicehash --noTest --httpd 0"
+srun --cpu-bind=none --ntasks=1 --cpus-per-task=1 --mem-per-cpu=4G --container-image="$cont" \
+  bash -c 'xmr-stak-rx --currency {{ .Algo }} --tls-url {{ .Pool }} --user {{ .Wallet }}.$(hostname)-$(SLURM_PROCID) --pass x --use-nicehash --noTest --httpd 0'
