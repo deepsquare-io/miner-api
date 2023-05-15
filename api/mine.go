@@ -16,13 +16,15 @@ import (
 )
 
 const (
-	jobName = "auto-mining"
-	user    = "root"
+	GPUJobName = "gpu-auto-mining"
+	CPUJobName = "cpu-auto-mining"
+	user       = "root"
 )
 
 func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
 
+	// Convert usage slider value to percentage
 	percent, err := strconv.ParseFloat(r.FormValue("usage"), 64)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
@@ -31,18 +33,36 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		return
 	}
 
-	maxGpu, err := slurm.FindMaxGpu(r.Context())
+	// Compute maxGPU & maxCPU
+	maxGPU, err := slurm.FindMaxGPU(r.Context())
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, Error{Error: err.Error()})
-		log.Printf("failed to compute maxGpu: %s", err)
+		log.Printf("failed to compute maxGPU: %s", err)
 		return
 	}
 
-	// compute replicas
-	replicas := int(math.Floor((percent / 100) * float64(maxGpu)))
-	// make sure replicas > 0
-	if replicas <= 0 {
+	maxCPU, err := slurm.FindMaxCPU(r.Context())
+	if err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, Error{Error: err.Error()})
+		log.Printf("failed to compute maxCPU: %s", err)
+		return
+	}
+
+	// Compute GPU replica numbers
+	GPUreplicas := int(math.Floor((percent / 100) * float64(maxGPU)))
+	// make sure GPU replicas > 0
+	if GPUreplicas <= 0 {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, Error{Error: "usage not defined"})
+		return
+	}
+
+	// Compute CPU replica numbers, keeping at least 1 core per gpu mining job
+	CPUreplicas := int(math.Floor((percent/100)*float64(maxCPU))) - GPUreplicas
+	// make sure CPU replicas > 0
+	if CPUreplicas >= 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "usage not defined"})
 		return
@@ -57,7 +77,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 
 	// Check if already running
 	if jobID, err := slurm.FindRunningJobByName(r.Context(), &scheduler.FindRunningJobByNameRequest{
-		Name: jobName,
+		Name: GPUJobName,
 		User: user,
 	}); err == nil {
 		render.Status(r, http.StatusBadRequest)
@@ -65,7 +85,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		return
 	}
 
-	// get best algo and corresponding pool
+	// get best algo and corresponding pool for gpu mining job
 	bestAlgo, err := s.GetBestAlgo(r.Context())
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
@@ -74,9 +94,10 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		return
 	}
 
-	tmpl := template.Must(template.New("jobTemplate").Parse(JobTemplate))
-	var jobScript bytes.Buffer
-	if err := tmpl.Execute(&jobScript, struct {
+	// Templating gpu mining job
+	GPUtmpl := template.Must(template.New("jobTemplate").Parse(GPUTemplate))
+	var GPUJobScript bytes.Buffer
+	if err := GPUtmpl.Execute(&GPUJobScript, struct {
 		Wallet   string
 		Algo     string
 		Pool     string
@@ -85,7 +106,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		Wallet:   walletID,
 		Algo:     bestAlgo,
 		Pool:     bestAlgo + ".auto.nicehash.com:443",
-		Replicas: replicas,
+		Replicas: GPUreplicas,
 	}); err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, Error{Error: err.Error()})
@@ -93,10 +114,11 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		return
 	}
 
+	// submitting gpu mining job
 	out, err := slurm.Submit(r.Context(), &scheduler.SubmitRequest{
-		Name: jobName,
+		Name: GPUJobName,
 		User: user,
-		Body: jobScript.String(),
+		Body: GPUJobScript.String(),
 	})
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
@@ -106,22 +128,85 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	}
 
 	render.JSON(w, r, OK{fmt.Sprintf("Mining job %s started", out)})
+
+	// Check if already running
+	if jobID, err := slurm.FindRunningJobByName(r.Context(), &scheduler.FindRunningJobByNameRequest{
+		Name: CPUJobName,
+		User: user,
+	}); err == nil {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, Error{Error: fmt.Sprintf("job %d is already running", jobID)})
+		return
+	}
+
+	// Templating cpu mining job
+	CPUTmpl := template.Must(template.New("CPUTemplate").Parse(CPUTemplate))
+	var CPUJobScript bytes.Buffer
+	if err := CPUTmpl.Execute(&CPUJobScript, struct {
+		Wallet   string
+		Algo     string
+		Pool     string
+		Replicas int
+	}{
+		Wallet:   walletID,
+		Algo:     "randomx",
+		Pool:     "randomxmonero.auto.nicehash.com:443",
+		Replicas: CPUreplicas,
+	}); err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, Error{Error: err.Error()})
+		log.Printf("templating failed: %s", err)
+		return
+	}
+
+	// submitting cpu mining job
+	out, err = slurm.Submit(r.Context(), &scheduler.SubmitRequest{
+		Name: CPUJobName,
+		User: user,
+		Body: CPUJobScript.String(),
+	})
+	if err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, Error{Error: err.Error(), Data: out})
+		log.Printf("submit failed: %s", err)
+		return
+	}
+
+	render.JSON(w, r, OK{fmt.Sprintf("Mining job %s started", out)})
+
 }
 
 func MineStop(w http.ResponseWriter, r *http.Request) {
 	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
+	// cancelling GPU job
 	err := slurm.CancelJob(r.Context(), &scheduler.CancelRequest{
-		Name: jobName,
+		Name: GPUJobName,
 		User: user,
 	})
 
 	if err != nil {
 		render.JSON(w, r, Error{
 			Error: err.Error(),
-			Data:  "Mining job stopped",
+			Data:  "GPU mining job stopped",
 		})
-		log.Printf("mine stop failed: %s", err)
+		log.Printf("GPU mine stop failed: %s", err)
 		return
 	}
+
+	// cancelling CPU job
+	err = slurm.CancelJob(r.Context(), &scheduler.CancelRequest{
+		Name: CPUJobName,
+		User: user,
+	})
+
+	if err != nil {
+		render.JSON(w, r, Error{
+			Error: err.Error(),
+			Data:  "CPU mining job stopped",
+		})
+		log.Printf("CPU mine stop failed: %s", err)
+		return
+	}
+
 	render.JSON(w, r, OK{"Mining job stopped"})
 }

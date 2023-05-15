@@ -89,26 +89,50 @@ func (s *Slurm) FindRunningJobByName(
 	return strconv.Atoi(strings.TrimSpace(strings.TrimRight(out, "\n")))
 }
 
-func (s *Slurm) FindMaxGpu(ctx context.Context) (int, error) {
+func (s *Slurm) FindMaxGPU(ctx context.Context) (int, error) {
 	cmd := "scontrol show nodes | grep CfgTRES | sed -E 's|.*gres/gpu=([^,]*)|\\1|g'"
 	out, err := s.executor.ExecAs(ctx, s.adminUser, cmd)
 	if err != nil {
-		log.Printf("FindMaxGpu failed: %s", err)
+		log.Printf("FindMaxGPU failed: %s", err)
 		return 0, err
 	}
 
 	out = strings.TrimSpace(string(out))
 	lines := strings.Split(out, "\n")
 
-	maxGpu := 0
+	maxGPU := 0
 	for _, line := range lines {
 		num, err := strconv.Atoi(line)
 		if err != nil {
 			log.Printf("Failed to convert %q to integer: %s", line, err)
 			return 0, err
 		}
-		maxGpu += num
+		maxGPU += num
 	}
 
-	return maxGpu, nil
+	return maxGPU, nil
+}
+
+func (s *Slurm) FindMaxCPU(ctx context.Context) (int, error) {
+	cmd := "scontrol show nodes | grep CfgTRES | sed -E 's/.*cpu=([0-9]+).*/\\1/'"
+	out, err := s.executor.ExecAs(ctx, s.adminUser, cmd)
+	if err != nil {
+		log.Printf("FindMaxCPU failed: %s", err)
+		return 0, err
+	}
+
+	out = strings.TrimSpace(string(out))
+	lines := strings.Split(out, "\n")
+
+	maxCPU := 0
+	for _, line := range lines {
+		num, err := strconv.Atoi(line)
+		if err != nil {
+			log.Printf("Failed to convert %q to integer: %s", line, err)
+			return 0, err
+		}
+		maxCPU += num
+	}
+
+	return maxCPU, nil
 }

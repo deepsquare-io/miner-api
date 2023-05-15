@@ -2,5 +2,8 @@ package api
 
 import _ "embed"
 
-//go:embed job.tmpl
-var JobTemplate string
+//go:embed templates/job.tmpl
+var GPUTemplate string
+
+//go:embed templates/cpu.tmpl
+var CPUTemplate string
