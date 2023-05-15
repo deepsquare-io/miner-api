@@ -23,7 +23,6 @@ var AlgoShortnames = map[string]string{
 	"ethash":      "eth",
 	"kawpow":      "kpw",
 	"kheavyhash":  "hh",
-	"neoscrypt":   "ns",
 	"octopus":     "ops",
 	"zelhash":     "zlh",
 	"zhash":       "zh",

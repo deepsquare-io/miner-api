@@ -45,9 +45,6 @@ algos :
   kheavyhash:
     hash-rate: 1530
     power: 240
-  neoscrypt:
-    hash-rate: 0
-    power: 0
   octopus:
     hash-rate: 158
     power: 540
