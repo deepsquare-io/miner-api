@@ -70,12 +70,17 @@
       window.addEventListener('DOMContentLoaded', () => {
         const cachedWalletId = localStorage.getItem('walletId');
         const cachedUsage = localStorage.getItem('usage');
+        const runningJobs = localStorage.getItem('runningJobs');
 
         if (cachedWalletId) {
           walletIdInput.value = cachedWalletId;
         }
         if (cachedUsage) {
           usageInput.value = cachedUsage;
+        }
+        if (runningJobs) {
+          startButton.innerText = runningJobs;
+          startButton.className = 'outline';
         }
       });
 
@@ -107,6 +112,7 @@
           .then((body) => {
             startButton.innerText = body.data;
             startButton.className = 'outline';
+            localStorage.setItem('runningJobs', body.data);
           })
           .catch((response) => {
             response.json().then((body) => {
@@ -136,6 +142,7 @@
           .then((body) => {
             stopButton.innerText = body.data;
             stopButton.className = 'secondary outline';
+            startButton.innerText = 'Start job';
           })
           .catch((response) => {
             response.json().then((body) => {
