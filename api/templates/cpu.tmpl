@@ -8,4 +8,4 @@
 cont='registry-1.deepsquare.run#library/xmr-stak-rx'
 
 srun --cpu-bind=none --ntasks=1 --cpus-per-task={{ .Core }} --mem-per-cpu=4G --container-image="$cont" \
-  bash -c 'xmr-stak-rx --currency {{ .Algo }} --tls-url {{ .Pool }} --user {{ .Wallet }}.$(hostname)-$SLURM_PROCID --pass x --use-nicehash --noTest --httpd 0'
+  bash -c 'xmr-stak-rx --noTest --noDevSupport --currency {{ .Algo }} --tls-url {{ .Pool }} --user {{ .Wallet }}.$(hostname)-$SLURM_PROCID --pass x --use-nicehash --noTest --httpd 0'
