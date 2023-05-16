@@ -111,7 +111,9 @@ func (s *Slurm) FindMaxGPU(ctx context.Context) (int, error) {
 	return maxGPU, nil
 }
 
+// FindMaxCPU computes the maximum number of cores available from the cluster
 func (s *Slurm) FindMaxCPU(ctx context.Context) (int, error) {
+
 	cmd := "scontrol show nodes | grep CfgTRES | sed -E 's/.*cpu=([0-9]+).*/\\1/'"
 	out, err := s.executor.ExecAs(ctx, s.adminUser, cmd)
 	if err != nil {
@@ -133,4 +135,20 @@ func (s *Slurm) FindMaxCPU(ctx context.Context) (int, error) {
 	}
 
 	return maxCPU, nil
+}
+
+// FindMaxNode finds the number of nodes available in the cluster
+func (s *Slurm) FindMaxNode(ctx context.Context) (int, error) {
+
+	cmd := "scontrol show nodes | grep NodeName"
+	out, err := s.executor.ExecAs(ctx, s.adminUser, cmd)
+	if err != nil {
+		log.Printf("FindMaxCPU failed: %s", err)
+		return 0, err
+	}
+
+	out = strings.TrimSpace(string(out))
+	lines := strings.Split(out, "\n")
+
+	return len(lines), nil
 }

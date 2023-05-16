@@ -33,12 +33,30 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		return
 	}
 
-	// Compute maxGPU & maxCPU
+	// Compute maxGPU
 	maxGPU, err := slurm.FindMaxGPU(r.Context())
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, Error{Error: err.Error()})
 		log.Printf("failed to compute maxGPU: %s", err)
+		return
+	}
+
+	// Compute GPU replica numbers
+	GPUReplicas := int(math.Floor((percent / 100) * float64(maxGPU)))
+	// make sure GPU replicas > 0
+	if GPUReplicas <= 0 {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, Error{Error: "usage not defined"})
+		return
+	}
+
+	// Compute maxNode
+	maxNode, err := slurm.FindMaxNode(r.Context())
+	if err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, Error{Error: err.Error()})
+		log.Printf("failed to compute maxNode: %s", err)
 		return
 	}
 
@@ -50,19 +68,9 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		return
 	}
 
-	// Compute GPU replica numbers
-	GPUreplicas := int(math.Floor((percent / 100) * float64(maxGPU)))
-	// make sure GPU replicas > 0
-	if GPUreplicas <= 0 {
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, Error{Error: "usage not defined"})
-		return
-	}
-
-	// Compute CPU replica numbers, keeping at least 1 core per gpu mining job
-	CPUreplicas := int(math.Floor((percent/100)*float64(maxCPU))) - GPUreplicas
-	// make sure CPU replicas > 0
-	if CPUreplicas <= 0 {
+	// Compute number of cores used by each miner, keeping 1 core per GPU miner
+	CPUPerTasks := int(math.Floor((percent / 100) * float64((maxCPU-maxGPU)/maxNode)))
+	if CPUPerTasks <= 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "usage not defined"})
 		return
@@ -106,7 +114,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		Wallet:   walletID,
 		Algo:     bestAlgo,
 		Pool:     bestAlgo + ".auto.nicehash.com:443",
-		Replicas: GPUreplicas,
+		Replicas: GPUReplicas,
 	}); err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, Error{Error: err.Error()})
@@ -141,15 +149,17 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	CPUTmpl := template.Must(template.New("CPUTemplate").Parse(CPUTemplate))
 	var CPUJobScript bytes.Buffer
 	if err := CPUTmpl.Execute(&CPUJobScript, struct {
-		Wallet   string
-		Algo     string
-		Pool     string
-		Replicas int
+		Wallet string
+		Algo   string
+		Pool   string
+		Node   int
+		Core   int
 	}{
-		Wallet:   walletID,
-		Algo:     "randomx",
-		Pool:     "randomxmonero.auto.nicehash.com:443",
-		Replicas: CPUreplicas,
+		Wallet: walletID,
+		Algo:   "randomx",
+		Pool:   "randomxmonero.auto.nicehash.com:443",
+		Node:   maxNode,
+		Core:   CPUPerTasks,
 	}); err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, Error{Error: err.Error()})
