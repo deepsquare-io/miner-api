@@ -2,10 +2,12 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"text/template"
 
@@ -19,19 +21,26 @@ const (
 	GPUJobName = "gpu-auto-mining"
 	CPUJobName = "cpu-auto-mining"
 	user       = "root"
+	APIUri     = "https://miner.internal"
+)
+
+var (
+	walletID string
+	percent  float64
 )
 
 func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
 
 	// Convert usage slider value to percentage
-	percent, err := strconv.ParseFloat(r.FormValue("usage"), 64)
+	usage, err := strconv.ParseFloat(r.FormValue("usage"), 64)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, Error{Error: err.Error()})
 		log.Printf("failed to parse usage value: %s", err)
 		return
 	}
+	percent = usage / 100
 
 	// Compute maxGPU
 	maxGPU, err := slurm.FindMaxGPU(r.Context())
@@ -43,7 +52,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	}
 
 	// Compute GPU replica numbers
-	GPUReplicas := int(math.Floor((percent / 100) * float64(maxGPU)))
+	GPUReplicas := int(math.Floor((percent) * float64(maxGPU)))
 	// make sure GPU replicas > 0
 	if GPUReplicas <= 0 {
 		render.Status(r, http.StatusBadRequest)
@@ -69,14 +78,14 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	}
 
 	// Compute number of cores used by each miner, keeping 1 core per GPU miner
-	CPUPerTasks := int(math.Floor((percent / 100) * float64((maxCPU-maxGPU)/maxNode)))
+	CPUPerTasks := int(math.Floor((percent) * float64((maxCPU-maxGPU)/maxNode)))
 	if CPUPerTasks <= 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "usage not defined"})
 		return
 	}
 
-	walletID := r.FormValue("walletId")
+	walletID = r.FormValue("walletId")
 	if len(walletID) == 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "wallet not defined"})
@@ -217,4 +226,38 @@ func MineStop(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.JSON(w, r, OK{"Mining job stopped"})
+}
+
+func RestartMiners(ctx context.Context) error {
+
+	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
+
+	// check if jobs are currently running
+	if _, err := slurm.FindRunningJobByName(ctx, &scheduler.FindRunningJobByNameRequest{
+		Name: GPUJobName,
+		User: user,
+	}); err != nil {
+		log.Printf("no jobs are currently running %s", err)
+		return err
+	}
+
+	// if jobs are running, restart them
+	_, err := http.Post(APIUri+"/stop", "", nil)
+	if err != nil {
+		log.Printf("failed to stop jobs: %s", err)
+		return err
+	}
+
+	formData := url.Values{}
+	formData.Set("usage", fmt.Sprintf("%f", percent))
+	formData.Set("walletId", walletID)
+
+	_, err = http.PostForm(APIUri+"/start", formData)
+	if err != nil {
+		log.Printf("failed to restart jobs: %s", err)
+		return err
+	}
+
+	log.Printf("successfully restarted jobs")
+	return nil
 }
