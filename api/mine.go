@@ -26,7 +26,7 @@ const (
 
 var (
 	walletID string
-	percent  float64
+	usage    float64
 )
 
 func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
@@ -40,7 +40,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		log.Printf("failed to parse usage value: %s", err)
 		return
 	}
-	percent = usage / 100
+	percent := usage / 100
 
 	// Compute maxGPU
 	maxGPU, err := slurm.FindMaxGPU(r.Context())
@@ -232,12 +232,11 @@ func RestartMiners(ctx context.Context) error {
 
 	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
 
-	// check if jobs are currently running
-	if _, err := slurm.FindRunningJobByName(ctx, &scheduler.FindRunningJobByNameRequest{
+	if jobID, err := slurm.FindRunningJobByName(ctx, &scheduler.FindRunningJobByNameRequest{
 		Name: GPUJobName,
 		User: user,
-	}); err != nil {
-		log.Printf("no jobs are currently running %s", err)
+	}); jobID == 0 {
+		log.Printf("no jobs are currently running: %s", err)
 		return err
 	}
 
@@ -249,7 +248,7 @@ func RestartMiners(ctx context.Context) error {
 	}
 
 	formData := url.Values{}
-	formData.Set("usage", fmt.Sprintf("%f", percent))
+	formData.Set("usage", fmt.Sprintf("%f", usage))
 	formData.Set("walletId", walletID)
 
 	_, err = http.PostForm(APIUri+"/start", formData)
