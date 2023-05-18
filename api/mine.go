@@ -57,6 +57,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	if GPUReplicas <= 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "usage not defined"})
+		log.Printf("usage not defined: %s", err)
 		return
 	}
 
@@ -82,6 +83,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	if CPUPerTasks <= 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "usage not defined"})
+		log.Printf("usage not defined: %s", err)
 		return
 	}
 
@@ -89,6 +91,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 	if len(walletID) == 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "wallet not defined"})
+		log.Printf("wallet not defined: %s", err)
 		return
 	}
 
@@ -247,7 +250,7 @@ func RestartMiners(ctx context.Context) error {
 	}
 
 	formData := url.Values{}
-	formData.Set("usage", fmt.Sprintf("%f", usage))
+	formData.Set("usage", strconv.FormatFloat(usage, 'f', 2, 64))
 	formData.Set("walletId", walletID)
 
 	_, err = http.PostForm(APIUri+"/start", formData)
