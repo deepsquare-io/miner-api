@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	_ "embed"
@@ -58,7 +59,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
+
 		if err := http.Serve(l, r); err != nil {
 			log.Fatal(err)
 		}
@@ -83,4 +90,7 @@ func main() {
 			}
 		}
 	}()
+
+	wg.Wait()
+
 }
