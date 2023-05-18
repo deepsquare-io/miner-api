@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -59,24 +58,27 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := http.Serve(l, r); err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		if err := http.Serve(l, r); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	// context for the relaunch job goroutine
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go func() {
-		ticker := time.NewTicker(time.Duration(time.Duration(switcher.Config.General.PollingFrequency).Minutes()))
+		ticker := time.NewTicker(time.Duration(switcher.Config.General.PollingFrequency) * time.Minute)
 		defer ticker.Stop()
 
 		for {
 			select {
 			case <-ticker.C:
+				log.Printf("autoswitch: restarting miners now")
 				err := api.RestartMiners(ctx)
 				if err != nil {
-					fmt.Println("Failed to relaunch jobs:", err)
+					log.Printf("failed to restart jobs: %s", err)
 				}
 			}
 		}
