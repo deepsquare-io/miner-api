@@ -232,15 +232,14 @@ func RestartMiners(ctx context.Context) error {
 
 	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
 
-	if jobID, err := slurm.FindRunningJobByName(ctx, &scheduler.FindRunningJobByNameRequest{
+	if _, err := slurm.FindRunningJobByName(ctx, &scheduler.FindRunningJobByNameRequest{
 		Name: GPUJobName,
 		User: user,
-	}); jobID == 0 {
+	}); err != nil {
 		log.Printf("no jobs are currently running: %s", err)
 		return err
 	}
 
-	// if jobs are running, restart them
 	_, err := http.Post(APIUri+"/stop", "", nil)
 	if err != nil {
 		log.Printf("failed to stop jobs: %s", err)

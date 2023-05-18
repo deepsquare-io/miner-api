@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -84,7 +85,19 @@ func (s *Slurm) FindRunningJobByName(
 		return 0, err
 	}
 
-	return strconv.Atoi(strings.TrimSpace(strings.TrimRight(out, "\n")))
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) == 0 {
+		log.Println("no jobs currently running")
+		return 0, errors.New("no running jobs found")
+	}
+
+	jobID, err := strconv.Atoi(strings.TrimSpace(lines[0]))
+	if err != nil {
+		log.Printf("Failed to parse JobId: %s", err)
+		return 0, err
+	}
+
+	return jobID, nil
 }
 
 func (s *Slurm) FindMaxGPU(ctx context.Context) (int, error) {
