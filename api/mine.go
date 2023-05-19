@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"text/template"
+	"time"
 
 	"github.com/go-chi/render"
 	"github.com/squarefactory/miner-api/autoswitch"
@@ -257,6 +258,8 @@ func RestartMiners(ctx context.Context) error {
 		log.Printf("api responded to /stop with %d status code", resp.StatusCode)
 		return fmt.Errorf("api responded to /stop with %d status code", resp.StatusCode)
 	}
+	// wait for the jobs to finish properly
+	time.Sleep(time.Duration(10) * time.Second)
 
 	// Create a new multipart buffer
 	body := &bytes.Buffer{}
@@ -290,7 +293,7 @@ func RestartMiners(ctx context.Context) error {
 		log.Printf("successfully restarted jobs")
 		return nil
 	} else {
-		log.Printf("api responded to /stop with %d status code", resp.StatusCode)
-		return fmt.Errorf("api responded to /stop with %d status code", resp.StatusCode)
+		log.Printf("api responded to /start with %d status code", resp.StatusCode)
+		return fmt.Errorf("api responded to /start with %d status code", resp.StatusCode)
 	}
 }
