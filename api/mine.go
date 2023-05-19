@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"mime/multipart"
 	"net/http"
-	"net/url"
 	"strconv"
 	"text/template"
 
@@ -25,8 +25,8 @@ const (
 )
 
 var (
-	walletID string
-	usage    float64
+	lastWalletID string
+	lastUsage    float64
 )
 
 func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
@@ -40,6 +40,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		log.Printf("failed to parse usage value: %s", err)
 		return
 	}
+	lastUsage = usage
 	percent := usage / 100
 
 	// Compute maxGPU
@@ -87,13 +88,14 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		return
 	}
 
-	walletID = r.FormValue("walletId")
+	walletID := r.FormValue("walletId")
 	if len(walletID) == 0 {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, Error{Error: "wallet not defined"})
 		log.Printf("wallet not defined: %s", err)
 		return
 	}
+	lastWalletID = walletID
 
 	// Check if already running
 	if jobID, err := slurm.FindRunningJobByName(r.Context(), &scheduler.FindRunningJobByNameRequest{
@@ -243,22 +245,52 @@ func RestartMiners(ctx context.Context) error {
 		return err
 	}
 
-	_, err := http.Post(APIUri+"/stop", "", nil)
+	resp, err := http.Post(APIUri+"/stop", "", nil)
 	if err != nil {
-		log.Printf("failed to stop jobs: %s", err)
+		log.Printf("failed to send /stop request : %s", err)
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("successfully stopped jobs")
+	} else {
+		log.Printf("api responded to /stop with %d status code", resp.StatusCode)
+		return fmt.Errorf("api responded to /stop with %d status code", resp.StatusCode)
+	}
+
+	// Create a new multipart buffer
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add the form fields
+	writer.WriteField("walletId", lastWalletID)
+	writer.WriteField("usage", fmt.Sprintf("%f", lastUsage))
+
+	// Close the multipart writer to finalize the form data
+	writer.Close()
+
+	req, err := http.NewRequest("POST", APIUri+"/start", body)
+	if err != nil {
+		log.Printf("failed to create new start request: %s", err)
 		return err
 	}
 
-	formData := url.Values{}
-	formData.Set("usage", strconv.FormatFloat(usage, 'f', 2, 64))
-	formData.Set("walletId", walletID)
+	// Set the content type header
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	_, err = http.PostForm(APIUri+"/start", formData)
+	// Perform the request
+	client := &http.Client{}
+	resp, err = client.Do(req)
 	if err != nil {
-		log.Printf("failed to restart jobs: %s", err)
+		log.Printf("failed to send /start request: %s", err)
 		return err
 	}
-
-	log.Printf("successfully restarted jobs")
-	return nil
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("successfully restarted jobs")
+		return nil
+	} else {
+		log.Printf("api responded to /stop with %d status code", resp.StatusCode)
+		return fmt.Errorf("api responded to /stop with %d status code", resp.StatusCode)
+	}
 }
