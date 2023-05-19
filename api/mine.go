@@ -171,7 +171,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		Core   int
 	}{
 		Wallet: walletID,
-		Algo:   "randomx",
+		Algo:   "rx/0",
 		Pool:   "randomxmonero.auto.nicehash.com:443",
 		Node:   maxNode,
 		Core:   CPUPerTasks,

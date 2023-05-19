@@ -1,11 +1,12 @@
-#!/bin/env bash
+#!/bin/sh
 #SBATCH --ntasks=1
 #SBATCH --array=1-{{ .Node }}
 #SBATCH --gpus-per-task=0
 #SBATCH --cpus-per-task={{ .Core }}
 #SBATCH --mem-per-cpu=8G
 
-cont='registry-1.deepsquare.run#library/xmr-stak-rx'
+cont='registry-1.deepsquare.run#library/xmrig'
 
-srun --cpu-bind=none --ntasks=1 --cpus-per-task={{ .Core }} --mem-per-cpu=4G --container-image="$cont" \
-  bash -c 'xmr-stak-rx --noTest --noDevSupport --currency {{ .Algo }} --tls-url {{ .Pool }} --user {{ .Wallet }}.$(hostname)-$SLURM_PROCID --pass x --use-nicehash --noTest --httpd 0'
+srun --ntasks=1 --cpus-per-task={{ .Core }} --mem-per-cpu=8G --container-image="$cont" \
+  sh -c '/app/xmrig --algo={{ .Algo }} --url={{ .Pool }} --user={{ .Wallet }}.$(hostname)-$SLURM_PROCID  --tls --nicehash'
+
