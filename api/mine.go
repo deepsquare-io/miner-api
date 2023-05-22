@@ -280,8 +280,14 @@ func RestartMiners(ctx context.Context) error {
 	writer := multipart.NewWriter(body)
 
 	// Add the form fields
-	writer.WriteField("walletId", lastWalletID)
-	writer.WriteField("usage", fmt.Sprintf("%f", lastUsage))
+	if err := writer.WriteField("walletId", lastWalletID); err != nil {
+		log.Printf("failed to write walletID to form: %s", err)
+		return err
+	}
+	if err := writer.WriteField("usage", fmt.Sprintf("%f", lastUsage)); err != nil {
+		log.Printf("failed to write usage to form: %s", err)
+		return err
+	}
 
 	// Close the multipart writer to finalize the form data
 	writer.Close()

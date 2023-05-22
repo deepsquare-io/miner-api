@@ -80,13 +80,11 @@ func main() {
 		defer ticker.Stop()
 
 		for {
-			select {
-			case <-ticker.C:
-				log.Printf("autoswitch: restarting miners now")
-				err := api.RestartMiners(ctx)
-				if err != nil {
-					log.Printf("failed to restart jobs: %s", err)
-				}
+			<-ticker.C
+			log.Printf("autoswitch: restarting miners now")
+			err := api.RestartMiners(ctx)
+			if err != nil {
+				log.Printf("failed to restart jobs: %s", err)
 			}
 		}
 	}()
