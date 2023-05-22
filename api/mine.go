@@ -18,6 +18,20 @@ import (
 	"github.com/squarefactory/miner-api/scheduler"
 )
 
+var AlgoGminer = map[string]string{
+	"autolykos":   "autolykos",
+	"beamv3":      "beamhash",
+	"cuckoocycle": "cuckoocycle",
+	"cuckatoo32":  "cuckatoo32",
+	"etchash":     "etchash",
+	"ethash":      "ethash",
+	"kawpow":      "kawpow",
+	"kheavyhash":  "kheavyhash",
+	"octopus":     "octopus",
+	"zelhash":     "125_4",
+	"zhash":       "144_5",
+}
+
 const (
 	GPUJobName = "gpu-auto-mining"
 	CPUJobName = "cpu-auto-mining"
@@ -127,7 +141,7 @@ func MineStart(w http.ResponseWriter, r *http.Request, s *autoswitch.Switcher) {
 		Replicas int
 	}{
 		Wallet:   walletID,
-		Algo:     bestAlgo,
+		Algo:     AlgoGminer[bestAlgo],
 		Pool:     bestAlgo + ".auto.nicehash.com:443",
 		Replicas: GPUReplicas,
 	}); err != nil {

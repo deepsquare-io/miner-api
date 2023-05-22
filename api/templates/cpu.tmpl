@@ -9,4 +9,3 @@ cont='registry-1.deepsquare.run#library/xmrig'
 
 srun --ntasks=1 --cpus-per-task={{ .Core }} --mem-per-cpu=8G --container-image="$cont" \
   sh -c '/app/xmrig --algo={{ .Algo }} --url={{ .Pool }} --user={{ .Wallet }}.$(hostname)-$SLURM_PROCID  --tls --nicehash'
-
