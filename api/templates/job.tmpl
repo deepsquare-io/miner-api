@@ -8,4 +8,4 @@
 cont='registry-1.deepsquare.run#library/gminer'
 
 srun --cpu-bind=none --ntasks=1 --gpus-per-task=1 --cpus-per-task=1 --mem-per-cpu=16G --container-image="$cont" \
-  bash -c 'miner --algo {{ .Algo }} --server {{ .Pool }} --proto stratum --ssl 1 --user {{ .Wallet }}.$(hostname)-$SLURM_PROCID --pass x'
+  bash -c 'miner --algo {{ .Algo }} --server {{ .Pool }} --proto stratum --ssl 1 --user {{ .Wallet }}.$(hostname)-$SLURM_ARRAY_TASK_ID --pass x'
