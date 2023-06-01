@@ -28,8 +28,8 @@ var AlgoGminer = map[string]string{
 	"kawpow":      "kawpow",
 	"kheavyhash":  "kheavyhash",
 	"octopus":     "octopus",
-	"zelhash":     "125_4",
-	"zhash":       "144_5",
+	"zelhash":     "equihash125_4",
+	"zhash":       "equihash144_5",
 }
 
 const (
@@ -253,7 +253,7 @@ func RestartMiners(ctx context.Context) error {
 	slurm := scheduler.NewSlurm(&executor.Shell{}, user)
 
 	if _, err := slurm.FindRunningJobByName(ctx, &scheduler.FindRunningJobByNameRequest{
-		Name: GPUJobName,
+		Name: CPUJobName,
 		User: user,
 	}); err != nil {
 		log.Printf("no jobs are currently running: %s", err)

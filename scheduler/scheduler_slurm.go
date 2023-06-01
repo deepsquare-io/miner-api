@@ -78,7 +78,7 @@ func (s *Slurm) FindRunningJobByName(
 	ctx context.Context,
 	req *FindRunningJobByNameRequest,
 ) (int, error) {
-	cmd := fmt.Sprintf("squeue --name %s -O JobId:256 --noheader", req.Name)
+	cmd := fmt.Sprintf("squeue --name %s -O ArrayJobId:256 --noheader", req.Name)
 	out, err := s.executor.ExecAs(ctx, req.User, cmd)
 	if err != nil {
 		log.Printf("FindRunningJobByName failed: %s", err)
