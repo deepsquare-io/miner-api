@@ -82,7 +82,7 @@ func main() {
 		for {
 			<-ticker.C
 			log.Printf("autoswitch: restarting miners now")
-			err := api.RestartMiners(ctx)
+			err := api.RestartMiners(ctx, switcher)
 			if err != nil {
 				log.Printf("failed to restart jobs: %s", err)
 			}
