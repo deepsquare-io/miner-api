@@ -19,7 +19,6 @@ import (
 )
 
 var AlgoGminer = map[string]string{
-	"autolykos":   "autolykos",
 	"beamv3":      "beamhash",
 	"cuckoocycle": "cuckoocycle",
 	"cuckatoo32":  "cuckatoo32",

@@ -15,7 +15,6 @@ import (
 
 // AlgoShortnames used to build the whattomine uri
 var AlgoShortnames = map[string]string{
-	"autolykos":   "al",
 	"beamv3":      "eqb",
 	"cuckoocycle": "cc",
 	"cuckatoo32":  "ct32",
