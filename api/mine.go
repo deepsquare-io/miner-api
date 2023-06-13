@@ -275,7 +275,7 @@ func StartJobs(slurm *scheduler.Slurm, ctx context.Context, replicas Replicas, d
 		Wallet:   data.walletID,
 		Algo:     AlgoGminer[data.algo],
 		Pool:     data.algo + ".auto.nicehash.com:443",
-		Replicas: replicas.replicasCPU,
+		Replicas: replicas.replicasGPU,
 	}); err != nil {
 		log.Printf("templating failed: %s", err)
 		return "", err
